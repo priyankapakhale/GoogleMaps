@@ -11,10 +11,35 @@ import java.util.HashMap;
 import java.util.List;
 
 /**
- * Created by Priyanka on 7/11/17.
+ * @author Priyanka
  */
 
-public class DataParser {
+class DataParser {
+
+
+    private HashMap<String,String> getDuration(JSONArray googleDirectionsJson)
+    {
+        HashMap<String,String> googleDirectionsMap = new HashMap<>();
+        String duration = "";
+        String distance ="";
+
+
+        try {
+
+            duration = googleDirectionsJson.getJSONObject(0).getJSONObject("duration").getString("text");
+            distance = googleDirectionsJson.getJSONObject(0).getJSONObject("distance").getString("text");
+
+            googleDirectionsMap.put("duration" , duration);
+            googleDirectionsMap.put("distance", distance);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+
+        return googleDirectionsMap;
+    }
+
 
     private HashMap<String, String> getPlace(JSONObject googlePlaceJson)
     {
@@ -60,6 +85,8 @@ public class DataParser {
         return googlePlacesMap;
     }
 
+
+
     private List<HashMap<String,String>> getPlaces(JSONArray jsonArray)
     {
         int count = jsonArray.length();
@@ -89,7 +116,7 @@ public class DataParser {
         try {
             Log.d("Places", "parse");
 
-            jsonObject = new JSONObject((String)jsonData);
+            jsonObject = new JSONObject(jsonData);
             jsonArray = jsonObject.getJSONArray("results");
 
         } catch (JSONException e) {
@@ -98,5 +125,75 @@ public class DataParser {
 
         return getPlaces(jsonArray);
     }
+
+    public HashMap<String,String> parseDirections(String jsonData)
+    {
+        JSONArray jsonArray = null;
+        JSONObject jsonObject = null;
+
+        try {
+            jsonObject = new JSONObject(jsonData);
+            jsonArray = jsonObject.getJSONArray("routes").getJSONObject(0).getJSONArray("legs"); //routes array
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return getDuration(jsonArray);
+
+    }
+
+
+
+    private List<HashMap<String,String>> getPaths(JSONArray googleDirectionsJson)
+    {
+        List<HashMap<String,String>> googleDirectionsList = new ArrayList<>();
+        JSONObject googlePathJson = null;
+        int count_paths = googleDirectionsJson.length();
+
+
+        for(int i = 0;i<count_paths;i++)
+        {
+            try {
+                googlePathJson = googleDirectionsJson.getJSONObject(i);
+                googleDirectionsList.add(getPath(googlePathJson));
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return googleDirectionsList;
+    }
+
+    private HashMap<String,String> getPath(JSONObject googlePathJson)
+    {
+        HashMap<String, String> googlePathMap = new HashMap<>();
+        String start_lat = "";
+        String start_lng = "";
+        String end_lat = "";
+        String end_lng = "";
+        String polyline = "";
+
+        try {
+            start_lat = googlePathJson.getJSONObject("start_location").getString("lat");
+            start_lng = googlePathJson.getJSONObject("start_location").getString("lng");
+            end_lat = googlePathJson.getJSONObject("end_location").getString("lat");
+            end_lng = googlePathJson.getJSONObject("end_location").getString("lng");
+            polyline = googlePathJson.getJSONObject("polyline").getString("points");
+
+            googlePathMap.put("start_lat" , start_lat);
+            googlePathMap.put("start_lng", start_lng);
+            googlePathMap.put("end_lat" , end_lat);
+            googlePathMap.put("end_lng", end_lng);
+            googlePathMap.put("polyline", polyline);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+
+        return googlePathMap;
+    }
+
+
 
 }
