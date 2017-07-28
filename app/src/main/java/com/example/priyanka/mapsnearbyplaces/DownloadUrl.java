@@ -49,10 +49,12 @@ public class DownloadUrl {
             e.printStackTrace();
         }
         finally {
-            inputStream.close();
+            if(inputStream != null)
+                inputStream.close();
             urlConnection.disconnect();
         }
 
+        Log.d("data downlaod",data);
         return data;
 
     }

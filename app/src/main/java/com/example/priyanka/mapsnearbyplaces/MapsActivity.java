@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -32,6 +33,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,7 +42,10 @@ import java.util.Map;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
         GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+        LocationListener,
+        GoogleMap.OnMarkerClickListener,
+        GoogleMap.OnMarkerDragListener
+        {
 
     private GoogleMap mMap;
     GoogleApiClient mGoogleApiClient;
@@ -49,6 +54,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationRequest mLocationRequest;
     int PROXIMITY_RADIUS = 10000;
     double latitude, longitude;
+    double end_latitude, end_longitude;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +79,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+
     }
 
     private boolean CheckGooglePlayServices() {
@@ -113,7 +122,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             buildGoogleApiClient();
             mMap.setMyLocationEnabled(true);
         }
+
+        mMap.setOnMarkerDragListener(this);
+        mMap.setOnMarkerClickListener(this);
+
     }
+
+
 
     protected synchronized void buildGoogleApiClient() {
         mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -136,7 +151,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 String location = tf_location.getText().toString();
                 List<Address> addressList = null;
                 MarkerOptions markerOptions = new MarkerOptions();
-
+                Log.d("location = ", location);
 
                 if (!location.equals("")) {
                     Geocoder geocoder = new Geocoder(this);
@@ -147,14 +162,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         e.printStackTrace();
                     }
 
-                    for (int i = 0; i < addressList.size(); i++) {
-                        Address myAddress = addressList.get(i);
-                        LatLng latLng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
-                        markerOptions.position(latLng);
-                        mMap.addMarker(markerOptions);
-                        mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                    if (addressList != null) {
+                        for (int i = 0; i < addressList.size(); i++) {
+                            Address myAddress = addressList.get(i);
+                            LatLng latLng = new LatLng(myAddress.getLatitude(), myAddress.getLongitude());
+                            markerOptions.position(latLng);
+                            mMap.addMarker(markerOptions);
+                            mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                        }
                     }
-
 
                 }
             }
@@ -165,10 +181,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 String url = getUrl(latitude, longitude, hospital);
 
                 dataTransfer[0] = mMap;
-                dataTransfer[1]= url;
+                dataTransfer[1] = url;
 
                 getNearbyPlacesData.execute(dataTransfer);
-                Toast.makeText(MapsActivity.this , "Showing Nearby Hospitals", Toast.LENGTH_LONG).show();
+                Toast.makeText(MapsActivity.this, "Showing Nearby Hospitals", Toast.LENGTH_LONG).show();
                 break;
 
             case R.id.B_restaurant:
@@ -178,10 +194,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 url = getUrl(latitude, longitude, restaurant);
                 getNearbyPlacesData = new GetNearbyPlacesData();
                 dataTransfer[0] = mMap;
-                dataTransfer[1]= url;
+                dataTransfer[1] = url;
 
                 getNearbyPlacesData.execute(dataTransfer);
-                Toast.makeText(MapsActivity.this , "Showing Nearby Hospitals", Toast.LENGTH_LONG).show();
+                Toast.makeText(MapsActivity.this, "Showing Nearby Hospitals", Toast.LENGTH_LONG).show();
                 break;
             case R.id.B_school:
                 mMap.clear();
@@ -190,13 +206,35 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 url = getUrl(latitude, longitude, school);
                 getNearbyPlacesData = new GetNearbyPlacesData();
                 dataTransfer[0] = mMap;
-                dataTransfer[1]= url;
+                dataTransfer[1] = url;
 
                 getNearbyPlacesData.execute(dataTransfer);
-                Toast.makeText(MapsActivity.this , "Showing Nearby Hospitals", Toast.LENGTH_LONG).show();
+                Toast.makeText(MapsActivity.this, "Showing Nearby Hospitals", Toast.LENGTH_LONG).show();
                 break;
-        }
 
+            case R.id.B_to:
+                dataTransfer = new Object[3];
+                url = getDirectionsUrl();
+                GetDirectionsData getDirectionsData = new GetDirectionsData();
+                dataTransfer[0] = mMap;
+                dataTransfer[1] = url;
+                dataTransfer[2] = new LatLng(end_latitude, end_longitude);
+                getDirectionsData.execute(dataTransfer);
+
+                break;
+
+
+        }
+    }
+
+    private String getDirectionsUrl()
+    {
+        StringBuilder googleDirectionsUrl = new StringBuilder("https://maps.googleapis.com/maps/api/directions/json?");
+        googleDirectionsUrl.append("origin="+latitude+","+longitude);
+        googleDirectionsUrl.append("&destination="+end_latitude+","+end_longitude);
+        googleDirectionsUrl.append("&key="+"AIzaSyCAcfy-02UHSu2F6WeQ1rhQhkCr51eBL9g");
+
+        return googleDirectionsUrl.toString();
     }
 
     private String getUrl(double latitude, double longitude, String nearbyPlace)
@@ -206,10 +244,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         googlePlacesUrl.append("&radius=" + PROXIMITY_RADIUS);
         googlePlacesUrl.append("&type=" + nearbyPlace);
         googlePlacesUrl.append("&sensor=true");
-        googlePlacesUrl.append("&key=" + "AIzaSyATuUiZUkEc_UgHuqsBJa1oqaODI-3mLs0");
+        googlePlacesUrl.append("&key=" + "AIzaSyBj-cnmMUY21M0vnIKz0k3tD3bRdyZea-Y");
         Log.d("getUrl", googlePlacesUrl.toString());
         return (googlePlacesUrl.toString());
     }
+
+
+
 
     @Override
     public void onConnected(Bundle bundle) {
@@ -242,9 +283,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         latitude = location.getLatitude();
         longitude = location.getLongitude();
+
+
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         MarkerOptions markerOptions = new MarkerOptions();
         markerOptions.position(latLng);
+        markerOptions.draggable(true);
         markerOptions.title("Current Position");
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_MAGENTA));
         mCurrLocationMarker = mMap.addMarker(markerOptions);
@@ -252,6 +296,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //move map camera
         mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
         mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+
+
         Toast.makeText(MapsActivity.this,"Your Current Location", Toast.LENGTH_LONG).show();
 
 
@@ -333,4 +379,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             // You can add here other case statements according to your requirement.
         }
     }
-}
+
+
+            @Override
+            public boolean onMarkerClick(Marker marker) {
+                marker.setDraggable(true);
+                return false;
+            }
+
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+                end_latitude = marker.getPosition().latitude;
+                        end_longitude =  marker.getPosition().longitude;
+
+                Log.d("end_lat",""+end_latitude);
+                Log.d("end_lng",""+end_longitude);
+            }
+        }
+
