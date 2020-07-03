@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/GoogleMaps.iml" filepath="$PROJECT_DIR$/.idea/modules/GoogleMaps.iml" group="GoogleMaps" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/GoogleMaps-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/GoogleMaps-app.iml" group="GoogleMaps/app" />
       <module fileurl="file://$PROJECT_DIR$/MapsNearbyPlaces.iml" filepath="$PROJECT_DIR$/MapsNearbyPlaces.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
